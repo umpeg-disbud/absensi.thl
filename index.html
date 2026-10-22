@@ -2,547 +2,393 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aplikasi Absensi Mobile</title>
-  <!-- Bootstrap 5 CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- FontAwesome & Icons -->
+  
+  <!-- CSS Framework & Leaflet Maps -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
   <style>
-    body {
-      background-color: #f4f6f9;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding-bottom: 70px;
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
     }
-    .card-custom {
-      border: none;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    #map {
-      height: 180px;
-      width: 100%;
-      border-radius: 12px;
-    }
-    #webcam {
-      width: 100%;
-      height: auto;
-      border-radius: 12px;
-      background: #000;
-      transform: scaleX(-1);
-    }
-    /* Bottom Navigation Bar */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: #ffffff;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
-      z-index: 1000;
-    }
-    .nav-item-custom {
-      text-align: center;
-      color: #8e8e93;
-      text-decoration: none;
-      font-size: 11px;
-      flex: 1;
-    }
-    .nav-item-custom i {
-      font-size: 18px;
-      display: block;
-      margin-bottom: 2px;
-    }
-    .nav-item-custom.active {
-      color: #0d6efd;
-      font-weight: 600;
-    }
-    .view-section {
-      display: none;
-    }
-    .view-section.active {
-      display: block;
-    }
-    .time-display {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #0d6efd;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 70px; }
+    
+    .container { max-width: 480px; margin: 0 auto; padding: 15px; }
+    .card { background: var(--card); padding: 18px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    h2, h3 { margin-bottom: 12px; color: var(--primary); }
+    
+    .form-group { margin-bottom: 12px; position: relative; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
+    .toggle-pass { position: absolute; right: 12px; top: 32px; cursor: pointer; color: #64748b; }
+    
+    .btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-secondary { background: #64748b; }
+    .btn-danger { background: #ef4444; }
+    
+    #map { height: 180px; width: 100%; border-radius: 8px; margin-top: 10px; }
+    .video-container { width: 100%; height: 200px; background: #000; border-radius: 8px; overflow: hidden; position: relative; margin-bottom: 10px; }
+    video, canvas { width: 100%; height: 100%; object-fit: cover; }
+    
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #e2e8f0; max-width: 480px; margin: 0 auto; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.75rem; color: #64748b; cursor: pointer; text-decoration: none; }
+    .nav-item.active { color: var(--primary); font-weight: bold; }
+    .nav-item i { font-size: 1.2rem; margin-bottom: 2px; }
+
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.85rem; z-index: 9999; display: none; }
+    .hidden { display: none !important; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8rem; }
+    th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
+    th { background: #f1f5f9; }
   </style>
 </head>
 <body>
 
-<div class="container py-3" id="app">
+  <div id="toast" class="toast"></div>
 
-  <!-- ALERT NOTIFIKASI -->
-  <div id="alertBox" class="alert alert-dismissible fade show d-none" role="alert">
-    <span id="alertMsg"></span>
-    <button type="button" class="btn-close" onclick="hideAlert()"></button>
-  </div>
-
-  <!-- VIEW: LOGIN -->
-  <div id="view-login" class="view-section active">
-    <div class="row justify-content-center mt-5">
-      <div class="col-12 col-sm-8 col-md-6">
-        <div class="card card-custom p-4 text-center">
-          <i class="fa-solid fa-user-check text-primary fa-3x mb-3"></i>
-          <h4 class="fw-bold mb-4">E-Presensi Mobile</h4>
-          <form id="formLogin" onsubmit="handleLogin(event)">
-            <div class="mb-3 text-start">
-              <label class="form-label text-muted small">NIK (16 Digit)</label>
-              <input type="text" class="form-control" id="loginNik" maxlength="16" pattern="\d{16}" required placeholder="Masukkan NIK">
-            </div>
-            <div class="mb-4 text-start position-relative">
-              <label class="form-label text-muted small">Password</label>
-              <div class="input-group">
-                <input type="password" class="form-control" id="loginPassword" required placeholder="Masukkan Password">
-                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('loginPassword', 'iconEyeLogin')">
-                  <i class="fa-solid fa-eye" id="iconEyeLogin"></i>
-                </button>
-              </div>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnLogin">
-              <span id="spinLogin" class="spinner-border spinner-border-sm me-2 d-none"></span>Masuk
-            </button>
-          </form>
+  <!-- VIEW LOGIN -->
+  <div id="view-login" class="container">
+    <div class="card" style="margin-top: 50px;">
+      <h2><i class="fa-solid fa-user-check"></i> Absensi Online</h2>
+      <form id="form-login">
+        <div class="form-group">
+          <label>NIK (16 Digit)</label>
+          <input type="number" id="login-nik" required placeholder="Masukkan NIK">
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- VIEW: UTAMA / ABSEN -->
-  <div id="view-home" class="view-section">
-    <div class="card card-custom p-3 mb-3 bg-primary text-white">
-      <div class="d-flex justify-content-between align-items-center">
-        <div>
-          <h6 class="mb-0 fw-bold" id="userNama">-</h6>
-          <small id="userUnit">-</small>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-pass" required placeholder="Masukkan Password">
+          <i class="fa-solid fa-eye toggle-pass" onclick="togglePassword('login-pass', this)"></i>
         </div>
-        <span class="badge bg-light text-primary" id="userNikBadge">-</span>
-      </div>
-    </div>
-
-    <div class="card card-custom p-3 mb-3 text-center">
-      <div id="currentDate" class="text-muted small"></div>
-      <div id="currentTime" class="time-display my-1">00:00:00</div>
-      <small class="text-secondary"><i class="fa-solid fa-location-dot me-1"></i><span id="geoCoords">Mencari lokasi...</span></small>
-    </div>
-
-    <div class="card card-custom p-3 mb-3">
-      <h6 class="fw-bold mb-2"><i class="fa-solid fa-map-location-dot me-2"></i>Peta Lokasi GPS</h6>
-      <div id="map"></div>
-    </div>
-
-    <div class="card card-custom p-3 mb-3 text-center">
-      <h6 class="fw-bold mb-2"><i class="fa-solid fa-camera me-2"></i>Foto Selfie</h6>
-      <video id="webcam" autoplay playsinline></video>
-      <canvas id="canvas" class="d-none"></canvas>
-    </div>
-
-    <div class="row g-2 mb-3">
-      <div class="col-6">
-        <button class="btn btn-success w-100 py-2 fw-bold" onclick="prosesAbsen('masuk')" id="btnMasuk">
-          <i class="fa-solid fa-right-to-bracket me-1"></i> Jam Masuk
-        </button>
-      </div>
-      <div class="col-6">
-        <button class="btn btn-danger w-100 py-2 fw-bold" onclick="prosesAbsen('pulang')" id="btnPulang">
-          <i class="fa-solid fa-right-from-bracket me-1"></i> Jam Pulang
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- VIEW: REKAP PRESENSI -->
-  <div id="view-rekap" class="view-section">
-    <h5 class="fw-bold mb-3"><i class="fa-solid fa-calendar-check me-2"></i>Rekap Presensi</h5>
-    <div class="card card-custom p-3 mb-3">
-      <div class="row g-2">
-        <div class="col-8">
-          <input type="date" class="form-control" id="filterTanggal">
-        </div>
-        <div class="col-4">
-          <button class="btn btn-primary w-100" onclick="loadRekap()"><i class="fa-solid fa-filter me-1"></i>Cari</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card card-custom p-3">
-      <div class="table-responsive">
-        <table class="table table-hover table-borderless align-middle mb-0">
-          <thead class="table-light">
-            <tr class="small">
-              <th>Tanggal</th>
-              <th>Masuk</th>
-              <th>Pulang</th>
-            </tr>
-          </thead>
-          <tbody id="tbRekap" class="small">
-            <tr><td colspan="3" class="text-center text-muted">Pilih tanggal / klik cari</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- VIEW: DATA PRIBADI & SETTING -->
-  <div id="view-profile" class="view-section">
-    <h5 class="fw-bold mb-3"><i class="fa-solid fa-user-gear me-2"></i>Pengaturan Profil</h5>
-    <div class="card card-custom p-4">
-      <form id="formProfile" onsubmit="handleUpdateProfile(event)">
-        <div class="mb-3">
-          <label class="form-label text-muted small">NIK</label>
-          <input type="text" class="form-control" id="profNik" readonly>
-        </div>
-        <div class="mb-3">
-          <label class="form-label text-muted small">Nama Lengkap</label>
-          <input type="text" class="form-control" id="profNama" required>
-        </div>
-        <div class="mb-3">
-          <label class="form-label text-muted small">Unit Kerja</label>
-          <input type="text" class="form-control" id="profUnit" required>
-        </div>
-        <div class="mb-4">
-          <label class="form-label text-muted small">Ubah Password</label>
-          <div class="input-group">
-            <input type="password" class="form-control" id="profPassword" placeholder="Password Baru">
-            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('profPassword', 'iconEyeProf')">
-              <i class="fa-solid fa-eye" id="iconEyeProf"></i>
-            </button>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" id="btnSaveProf">Simpan Perubahan</button>
+        <button type="submit" class="btn"><i class="fa-solid fa-right-to-bracket"></i> Masuk</button>
       </form>
-      <hr class="my-4">
-      <button class="btn btn-outline-danger w-100 fw-bold" onclick="handleLogout()">
-        <i class="fa-solid fa-right-from-bracket me-2"></i>Keluar
-      </button>
     </div>
   </div>
 
-</div>
-
-<!-- BOTTOM NAVIGATION -->
-<nav class="bottom-nav d-none" id="bottomNav">
-  <a href="#" class="nav-item-custom active" onclick="switchNav('home', this)">
-    <i class="fa-solid fa-house"></i>Home
-  </a>
-  <a href="#" class="nav-item-custom" onclick="switchNav('rekap', this)">
-    <i class="fa-solid fa-clock-rotate-left"></i>Rekap
-  </a>
-  <a href="#" class="nav-item-custom" onclick="switchNav('profile', this)">
-    <i class="fa-solid fa-user"></i>Profil
-  </a>
-</nav>
-
-<!-- JS Libraries -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script>
-  // CONFIG: Ganti dengan URL deployment Google Apps Script Anda
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFjDvlnW3WzUucYqrdSwZJlLSiTahAP6x6GW0Fo-7YABcw2aKVvED_NKkZ7bYTu2s5yA/exec";
-
-  let currentUser = null;
-  let currentLat = null;
-  let currentLng = null;
-  let map = null;
-  let marker = null;
-  let videoStream = null;
-  let currentDateStr = "";
-
-  document.addEventListener("DOMContentLoaded", () => {
-    startClock();
-    checkAutoRefreshDate();
-  });
-
-  // Toggle Tampilkan/Sembunyikan Password
-  function togglePassword(inputId, iconId) {
-    const input = document.getElementById(inputId);
-    const icon = document.getElementById(iconId);
-    if (input.type === "password") {
-      input.type = "text";
-      icon.classList.replace("fa-eye", "fa-eye-slash");
-    } else {
-      input.type = "password";
-      icon.classList.replace("fa-eye-slash", "fa-eye");
-    }
-  }
-
-  // Real-time Clock
-  function startClock() {
-    setInterval(() => {
-      const now = new Date();
-      document.getElementById("currentTime").innerText = now.toLocaleTimeString('id-ID');
-      
-      const dayOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      const formattedDate = now.toLocaleDateString('id-ID', dayOptions);
-      document.getElementById("currentDate").innerText = formattedDate;
-
-      // Check Refresh Otomatis jika berganti hari
-      const d = String(now.getDate()).padStart(2, '0');
-      const m = String(now.getMonth() + 1).padStart(2, '0');
-      const y = now.getFullYear();
-      const todayStr = `${d}-${m}-${y}`;
-
-      if (currentDateStr && currentDateStr !== todayStr) {
-        currentDateStr = todayStr;
-        location.reload(); // Refresh otomatis hari berikutnya
-      } else {
-        currentDateStr = todayStr;
-      }
-    }, 1000);
-  }
-
-  function checkAutoRefreshDate() {
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const y = now.getFullYear();
-    currentDateStr = `${d}-${m}-${y}`;
-  }
-
-  // Custom Alert pengganti Popup Browser
-  function showAlert(message, type = "danger") {
-    const box = document.getElementById("alertBox");
-    const msg = document.getElementById("alertMsg");
-    box.className = `alert alert-${type} alert-dismissible fade show`;
-    msg.innerText = message;
-    box.classList.remove("d-none");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function hideAlert() {
-    document.getElementById("alertBox").classList.add("d-none");
-  }
-
-  // Navigation Handler
-  function switchNav(viewName, element) {
-    hideAlert();
-    document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active"));
-    document.querySelectorAll(".nav-item-custom").forEach(n => n.classList.remove("active"));
-
-    document.getElementById(`view-${viewName}`).classList.add("active");
-    if(element) element.classList.add("active");
-
-    if (viewName === "home") {
-      initCamera();
-      initGPS();
-    } else {
-      stopCamera();
-    }
-
-    if (viewName === "rekap") {
-      loadRekap();
-    }
-  }
-
-  // Login Process
-  function handleLogin(e) {
-    e.preventDefault();
-    hideAlert();
-    const nik = document.getElementById("loginNik").value;
-    const pass = document.getElementById("loginPassword").value;
-    const btn = document.getElementById("btnLogin");
-    const spin = document.getElementById("spinLogin");
-
-    btn.disabled = true;
-    spin.classList.remove("d-none");
-
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "login", nik: nik, password: pass })
-    })
-    .then(res => res.json())
-    .then(data => {
-      btn.disabled = false;
-      spin.classList.add("d-none");
-
-      if (data.success) {
-        currentUser = data.user;
-        setupUserSession();
-      } else {
-        showAlert(data.message);
-      }
-    })
-    .catch(err => {
-      btn.disabled = false;
-      spin.classList.add("d-none");
-      showAlert("Gagal terhubung ke server!");
-    });
-  }
-
-  function setupUserSession() {
-    document.getElementById("userNama").innerText = currentUser.nama;
-    document.getElementById("userUnit").innerText = currentUser.unitKerja;
-    document.getElementById("userNikBadge").innerText = currentUser.nik;
-
-    document.getElementById("profNik").value = currentUser.nik;
-    document.getElementById("profNama").value = currentUser.nama;
-    document.getElementById("profUnit").value = currentUser.unitKerja;
-
-    document.getElementById("bottomNav").classList.remove("d-none");
-    switchNav("home", document.querySelectorAll(".nav-item-custom")[0]);
-  }
-
-  function handleLogout() {
-    currentUser = null;
-    stopCamera();
-    document.getElementById("bottomNav").classList.add("d-none");
-    document.querySelectorAll(".view-section").forEach(v => v.classList.remove("active"));
-    document.getElementById("view-login").classList.add("active");
-  }
-
-  // Camera Access
-  function initCamera() {
-    const video = document.getElementById("webcam");
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-      .then(stream => {
-        videoStream = stream;
-        video.srcObject = stream;
-      })
-      .catch(err => showAlert("Kamera depan tidak dapat diakses!"));
-    }
-  }
-
-  function stopCamera() {
-    if (videoStream) {
-      videoStream.getTracks().forEach(track => track.stop());
-      videoStream = null;
-    }
-  }
-
-  // GPS Auto Track & Leaflet Map
-  function initGPS() {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.watchPosition(position => {
-        currentLat = position.coords.latitude;
-        currentLng = position.coords.longitude;
-        document.getElementById("geoCoords").innerText = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
-
-        if (!map) {
-          map = L.map('map').setView([currentLat, currentLng], 17);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-          }).addTo(map);
-          marker = L.marker([currentLat, currentLng]).addTo(map);
-        } else {
-          marker.setLatLng([currentLat, currentLng]);
-          map.setView([currentLat, currentLng]);
-        }
-      }, err => {
-        showAlert("Gagal mendapatkan lokasi GPS! Pastikan GPS HP aktif.");
-      }, { enableHighAccuracy: true });
-    }
-  }
-
-  // Process Attendance
-  function prosesAbsen(tipe) {
-    if (!currentLat || !currentLng) {
-      showAlert("Lokasi GPS belum ditemukan!");
-      return;
-    }
-
-    const btn = tipe === "masuk" ? document.getElementById("btnMasuk") : document.getElementById("btnPulang");
-    btn.disabled = true;
-
-    const payload = {
-      action: "absen",
-      tipe: tipe,
-      nik: currentUser.nik,
-      nama: currentUser.nama,
-      unitKerja: currentUser.unitKerja,
-      tanggal: currentDateStr,
-      waktu: document.getElementById("currentTime").innerText,
-      lat: currentLat,
-      lng: currentLng
-    };
-
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-      btn.disabled = false;
-      showAlert(data.message, data.success ? "success" : "danger");
-    })
-    .catch(err => {
-      btn.disabled = false;
-      showAlert("Terjadi kesalahan sistem saat menyimpan absen!");
-    });
-  }
-
-  // Rekap Presensi
-  function loadRekap() {
-    const tgl = document.getElementById("filterTanggal").value;
-    let formattedFilterDate = "";
+  <!-- APP CONTENT (Hidden default) -->
+  <div id="app-content" class="hidden">
     
-    if (tgl) {
-      const parts = tgl.split("-"); // YYYY-MM-DD
-      formattedFilterDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    <!-- PAGE 1: ABSENSI -->
+    <div id="page-absen" class="container page">
+      <div class="card">
+        <h3 id="user-greeting">Halo, User</h3>
+        <p style="font-size: 0.85rem; color: #64748b;" id="user-unit">Unit Kerja: -</p>
+        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
+        <p><strong>Tanggal:</strong> <span id="clock-date">--/--/----</span></p>
+        <p><strong>Waktu Saat Ini:</strong> <span id="clock-time">00:00:00</span></p>
+        <p style="font-size: 0.8rem; margin-top: 5px;"><strong>GPS:</strong> <span id="gps-status">Mencari lokasi...</span></p>
+        <div id="map"></div>
+      </div>
+
+      <div class="card">
+        <h3>Ambil Selfie</h3>
+        <div class="video-container">
+          <video id="webcam" autoplay playsinline></video>
+          <canvas id="canvas" class="hidden"></canvas>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn" onclick="takeAbsen('masuk')"><i class="fa-solid fa-right-to-bracket"></i> Jam Masuk</button>
+          <button class="btn btn-secondary" onclick="takeAbsen('pulang')"><i class="fa-solid fa-right-from-bracket"></i> Jam Pulang</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: REKAP PRESENSI -->
+    <div id="page-rekap" class="container page hidden">
+      <div class="card">
+        <h3><i class="fa-solid fa-calendar-check"></i> Rekap Presensi</h3>
+        <button class="btn" onclick="loadRekap()" style="margin-bottom: 10px;"><i class="fa-solid fa-rotate"></i> Refresh Rekap</button>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Tgl</th>
+                <th>Masuk</th>
+                <th>Pulang</th>
+                <th>Foto</th>
+              </tr>
+            </thead>
+            <tbody id="rekap-list">
+              <tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: SETTING & PROFIL -->
+    <div id="page-setting" class="container page hidden">
+      <div class="card">
+        <h3><i class="fa-solid fa-user-gear"></i> Data Pribadi & Setting</h3>
+        <form id="form-profile">
+          <div class="form-group">
+            <label>NIK</label>
+            <input type="text" id="prof-nik" readonly style="background: #e2e8f0;">
+          </div>
+          <div class="form-group">
+            <label>Nama Lengkap</label>
+            <input type="text" id="prof-nama" required>
+          </div>
+          <div class="form-group">
+            <label>Unit Kerja</label>
+            <input type="text" id="prof-unit" required>
+          </div>
+          <div class="form-group">
+            <label>Password Baru</label>
+            <input type="password" id="prof-pass" placeholder="Isi untuk ubah password">
+            <i class="fa-solid fa-eye toggle-pass" onclick="togglePassword('prof-pass', this)"></i>
+          </div>
+          <button type="submit" class="btn" style="margin-bottom: 10px;"><i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan</button>
+          <button type="button" class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-power-off"></i> Keluar</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVBAR -->
+    <div class="bottom-nav">
+      <div class="nav-item active" onclick="switchPage('absen', this)"><i class="fa-solid fa-camera"></i> Absen</div>
+      <div class="nav-item" onclick="switchPage('rekap', this)"><i class="fa-solid fa-list-check"></i> Rekap</div>
+      <div class="nav-item" onclick="switchPage('setting', this)"><i class="fa-solid fa-gear"></i> Setting</div>
+    </div>
+
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // **GANTI URL INI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA**
+    const SCRIPT_URL = "GANTI_DENGAN_WEB_APP_URL_GAS";
+
+    let currentUser = null;
+    let currentLat = null;
+    let currentLng = null;
+    let map, marker;
+    let videoStream = null;
+
+    // --- UTILS ---
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 3500);
     }
 
-    const tbody = document.getElementById("tbRekap");
-    tbody.innerHTML = `<tr><td colspan="3" class="text-center"><span class="spinner-border spinner-border-sm"></span> Memuat...</td></tr>`;
-
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "getRekap", nik: currentUser.nik, tanggal: formattedFilterDate })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success && data.data.length > 0) {
-        tbody.innerHTML = data.data.map(item => `
-          <tr>
-            <td>${item.tanggal}</td>
-            <td><span class="badge bg-success">${item.jamMasuk || '-'}</span></td>
-            <td><span class="badge bg-danger">${item.jamPulang || '-'}</span></td>
-          </tr>
-        `).join("");
+    function togglePassword(inputId, icon) {
+      const input = document.getElementById(inputId);
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
       } else {
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Data presensi tidak ditemukan.</td></tr>`;
+        input.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+      }
+    }
+
+    // --- JAM & TANGGAL REALTIME ---
+    function updateClock() {
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      
+      document.getElementById("clock-date").innerText = `${dd}-${mm}-${yyyy}`;
+      document.getElementById("clock-time").innerText = now.toTimeString().split(' ')[0];
+
+      // Reset otomatis jika melewati midnight (00:00:01)
+      if (now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 1) {
+        location.reload();
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // --- GPS REALTIME ---
+    function initGPS() {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            currentLat = pos.coords.latitude;
+            currentLng = pos.coords.longitude;
+            document.getElementById("gps-status").innerText = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
+            
+            if (!map) {
+              map = L.map('map').setView([currentLat, currentLng], 17);
+              L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+              marker = L.marker([currentLat, currentLng]).addTo(map).bindPopup("Lokasi Anda").openPopup();
+            } else {
+              marker.setLatLng([currentLat, currentLng]);
+              map.panTo([currentLat, currentLng]);
+            }
+          },
+          (err) => { document.getElementById("gps-status").innerText = "Gagal mengakses GPS: " + err.message; },
+          { enableHighAccuracy: true, maximumAge: 0 }
+        );
+      } else {
+        document.getElementById("gps-status").innerText = "GPS tidak didukung browser ini.";
+      }
+    }
+
+    // --- WEBCAM SELFIE ---
+    async function initCamera() {
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+        document.getElementById("webcam").srcObject = videoStream;
+      } catch (err) {
+        showToast("Kamera tidak dapat diakses!");
+      }
+    }
+
+    // --- NAVIGASI TABS ---
+    function switchPage(pageId, el) {
+      document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+      
+      document.getElementById(`page-${pageId}`).classList.remove("hidden");
+      el.classList.add("active");
+
+      if (pageId === "rekap") loadRekap();
+    }
+
+    // --- AUTH LOGIN ---
+    document.getElementById("form-login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nik = document.getElementById("login-nik").value;
+      const pass = document.getElementById("login-pass").value;
+
+      showToast("Sedang memproses login...");
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "login", nik: nik, password: pass })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+          currentUser = result.user;
+          document.getElementById("view-login").classList.add("hidden");
+          document.getElementById("app-content").classList.remove("hidden");
+          
+          document.getElementById("user-greeting").innerText = `Halo, ${currentUser.nama}`;
+          document.getElementById("user-unit").innerText = `Unit Kerja: ${currentUser.unitKerja}`;
+          document.getElementById("prof-nik").value = currentUser.nik;
+          document.getElementById("prof-nama").value = currentUser.nama;
+          document.getElementById("prof-unit").value = currentUser.unitKerja;
+
+          initGPS();
+          initCamera();
+          showToast("Login Berhasil!");
+        } else {
+          showToast(result.message);
+        }
+      } catch (err) {
+        showToast("Gagal terhubung ke server!");
       }
     });
-  }
 
-  // Update Profile
-  function handleUpdateProfile(e) {
-    e.preventDefault();
-    hideAlert();
-    const pass = document.getElementById("profPassword").value;
-    const nama = document.getElementById("profNama").value;
-    const unit = document.getElementById("profUnit").value;
+    // --- AKSI ABSENSI ---
+    async function takeAbsen(type) {
+      if (!currentLat || !currentLng) {
+        showToast("Titik GPS belum terdeteksi!");
+        return;
+      }
 
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({
+      // Capture Selfie ke Canvas Base64
+      const video = document.getElementById("webcam");
+      const canvas = document.getElementById("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const fotoBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+      const payload = {
+        action: "submitAbsen",
+        type: type,
+        nik: currentUser.nik,
+        nama: currentUser.nama,
+        unitKerja: currentUser.unitKerja,
+        tanggal: document.getElementById("clock-date").innerText,
+        jam: document.getElementById("clock-time").innerText,
+        lat: currentLat,
+        lng: currentLng,
+        fotoBase64: fotoBase64
+      };
+
+      showToast("Mengirim Absensi...");
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        showToast(result.message);
+      } catch (err) {
+        showToast("Terjadi kesalahan pengiriman!");
+      }
+    }
+
+    // --- REKAP DATA ---
+    async function loadRekap() {
+      const tbody = document.getElementById("rekap-list");
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Memuat data...</td></tr>';
+      
+      try {
+        const res = await fetch(SCRIPT_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "getRekap", nik: currentUser.nik })
+        });
+        const result = await res.json();
+
+        if (result.success && result.data.length > 0) {
+          tbody.innerHTML = "";
+          result.data.forEach(item => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${item.tanggal}</td>
+              <td>${item.jamMasuk}</td>
+              <td>${item.jamPulang}</td>
+              <td>${item.foto ? `<a href="${item.foto}" target="_blank">Lihat</a>` : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+        } else {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Belum ada rekap.</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Gagal memuat rekap.</td></tr>';
+      }
+    }
+
+    // --- SIMPAN PROFIL ---
+    document.getElementById("form-profile").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const payload = {
         action: "updateProfile",
         nik: currentUser.nik,
-        password: pass,
-        nama: nama,
-        unitKerja: unit
-      })
-    })
-    .then(res => res.json())
-    .then(data => {
-      showAlert(data.message, data.success ? "success" : "danger");
-      if (data.success) {
-        currentUser.nama = nama;
-        currentUser.unitKerja = unit;
-        document.getElementById("userNama").innerText = nama;
-        document.getElementById("userUnit").innerText = unit;
-        document.getElementById("profPassword").value = "";
+        nama: document.getElementById("prof-nama").value,
+        unitKerja: document.getElementById("prof-unit").value,
+        password: document.getElementById("prof-pass").value
+      };
+
+      showToast("Menyimpan...");
+      try {
+        const res = await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+        const result = await res.json();
+        showToast(result.message);
+      } catch (err) {
+        showToast("Gagal memperbarui profil!");
       }
     });
-  }
-</script>
+
+    function logout() {
+      location.reload();
+    }
+  </script>
 </body>
 </html>
