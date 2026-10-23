@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Aplikasi Absensi Online</title>
+  
+  <!-- CSS Framework & Leaflet Maps -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root {
+      --primary-color: #0d6efd;
+      --bg-color: #f8f9fa;
+    }
+    body {
+      background-color: var(--bg-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      padding-bottom: 70px;
+    }
+    .app-card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border: none;
+      margin-bottom: 15px;
+    }
+    #map {
+      height: 180px;
+      border-radius: 12px;
+      width: 100%;
+    }
+    /* Bottom Navigation Modern */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 65px;
+      background: #ffffff;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #e9ecef;
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+    }
+    .nav-item-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #6c757d;
+      text-decoration: none;
+      font-size: 0.75rem;
+      border: none;
+      background: none;
+    }
+    .nav-item-btn.active {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+    .nav-item-btn i {
+      font-size: 1.3rem;
+      margin-bottom: 2px;
+    }
+    .btn-fingerprint {
+      width: 65px;
+      height: 65px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 2rem;
+      box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+      border: 4px solid #ffffff;
+      margin-top: -25px;
+    }
+    .camera-container {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      transform: scaleX(-1); /* Mirror Selfie */
+    }
+    .page-section {
+      display: none;
+    }
+    .page-section.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE LOGIN ==================== -->
+  <div id="page-login" class="container pt-5 page-section active">
+    <div class="row justify-content-center">
+      <div class="col-12 col-sm-8 col-md-6">
+        <div class="card app-card p-4">
+          <div class="text-center mb-4">
+            <i class="bi bi-person-bounding-box text-primary display-3"></i>
+            <h4 class="fw-bold mt-2">Absensi Online</h4>
+            <p class="text-muted small">Silakan login menggunakan NIK Anda</p>
+          </div>
+          <form id="formLogin">
+            <div class="mb-3">
+              <label class="form-label small fw-bold">NIK (16 Digit)</label>
+              <input type="number" class="form-control" id="loginNik" placeholder="Masukkan NIK" required pattern="\d{16}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Password</label>
+              <div class="input-group">
+                <input type="password" class="form-control" id="loginPass" placeholder="Masukkan Password" required>
+                <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('loginPass', 'eyeIconLogin')">
+                  <i class="bi bi-eye" id="eyeIconLogin"></i>
+                </button>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 mt-2 fw-bold" id="btnLogin">Masuk</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE UTAMA (DASHBOARD) ==================== -->
+  <div id="page-home" class="container pt-3 page-section">
+    <!-- Header User -->
+    <div class="card app-card p-3 bg-primary text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="mb-0 text-white-50">Selamat Datang,</h6>
+          <h5 class="fw-bold mb-0" id="userNama">-</h5>
+          <small id="userUnit">-</small>
+        </div>
+        <i class="bi bi-person-circle display-6"></i>
+      </div>
+    </div>
+
+    <!-- Tanggal & Jam Live -->
+    <div class="card app-card p-3 text-center">
+      <div class="text-uppercase small fw-bold text-muted" id="txtTanggal">-</div>
+      <div class="display-5 fw-bold text-dark my-1" id="txtJam">00:00:00</div>
+      <div class="row mt-2 pt-2 border-top">
+        <div class="col-6 border-end">
+          <span class="small text-muted d-block">Jam Masuk</span>
+          <strong class="text-success fs-5" id="txtJamMasuk">--:--</strong>
+        </div>
+        <div class="col-6">
+          <span class="small text-muted d-block">Jam Pulang</span>
+          <strong class="text-danger fs-5" id="txtJamPulang">--:--</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map & GPS -->
+    <div class="card app-card p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold small"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Lokasi GPS Anda</span>
+        <span class="badge bg-light text-dark font-monospace" id="txtKoordinat">Searching...</span>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE REKAP PRESENSI ==================== -->
+  <div id="page-rekap" class="container pt-3 page-section">
+    <h5 class="fw-bold mb-3"><i class="bi bi-journal-text me-2"></i>Rekap Presensi</h5>
+    <div id="listRekap">
+      <div class="text-center text-muted py-4">Memuat data...</div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE PROFIL & SETTING ==================== -->
+  <div id="page-profil" class="container pt-3 page-section">
+    <h5 class="fw-bold mb-3"><i class="bi bi-gear-fill me-2"></i>Data Pribadi & Setting</h5>
+    <div class="card app-card p-3">
+      <form id="formProfil">
+        <div class="mb-3">
+          <label class="form-label small fw-bold">NIK</label>
+          <input type="text" class="form-control" id="profNik" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Nama Lengkap</label>
+          <input type="text" class="form-control" id="profNama" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Unit Kerja</label>
+          <input type="text" class="form-control" id="profUnit" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Password Baru</label>
+          <div class="input-group">
+            <input type="password" class="form-control" id="profPass" placeholder="Ubah Password" required>
+            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('profPass', 'eyeIconProf')">
+              <i class="bi bi-eye" id="eyeIconProf"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 fw-bold">Simpan Perubahan</button>
+      </form>
+      <hr>
+      <button class="btn btn-outline-danger w-100 fw-bold" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Keluar</button>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL SUB MENU ABSEN (SELFIE KAMERA) ==================== -->
+  <div class="modal fade" id="modalAbsen" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content style-modal">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold">Take Selfie & Absen</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCamera()"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="camera-container mb-3">
+            <video id="webcam" autoplay playsinline></video>
+          </div>
+          <div class="d-grid gap-2">
+            <button class="btn btn-success py-2 fw-bold" onclick="executeAbsen('masuk')">
+              <i class="bi bi-box-arrow-in-right me-1"></i> One-Click Jam Masuk
+            </button>
+            <button class="btn btn-danger py-2 fw-bold" onclick="executeAbsen('pulang')">
+              <i class="bi bi-box-arrow-left me-1"></i> One-Click Jam Pulang
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BOTTOM NAVIGATION ==================== -->
+  <nav class="bottom-nav" id="mainNav" style="display: none;">
+    <button class="nav-item-btn active" onclick="switchPage('home', this)">
+      <i class="bi bi-house-door-fill"></i>
+      <span>Utama</span>
+    </button>
+    <button class="nav-item-btn" onclick="switchPage('rekap', this)">
+      <i class="bi bi-file-earmark-text-fill"></i>
+      <span>Rekap</span>
+    </button>
+    
+    <!-- Tombol Sidik Jari Modal -->
+    <button class="btn-fingerprint" onclick="openAbsenModal()">
+      <i class="bi bi-fingerprint"></i>
+    </button>
+
+    <button class="nav-item-btn" onclick="switchPage('profil', this)">
+      <i class="bi bi-person-fill"></i>
+      <span>Pribadi</span>
+    </button>
+    <button class="nav-item-btn" onclick="switchPage('profil', this)">
+      <i class="bi bi-gear-fill"></i>
+      <span>Setting</span>
+    </button>
+  </nav>
+
+  <!-- JS Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    // MASUKKAN URL GOOGLE APPS SCRIPT WEB APP ANDA DI SINI
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxFjDvlnW3WzUucYqrdSwZJlLSiTahAP6x6GW0Fo-7YABcw2aKVvED_NKkZ7bYTu2s5yA/exec";
+
+    let currentUser = null;
+    let currentLat = null;
+    let currentLng = null;
+    let map = null, marker = null, userCircle = null;
+    let videoStream = null;
+
+    // Format Tanggal dd-MMM-yyyy
+    function formatDateFormatted(date) {
+      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+      const d = String(date.getDate()).padStart(2, '0');
+      const m = months[date.getMonth()];
+      const y = date.getFullYear();
+      return `${d}-${m}-${y}`;
+    }
+
+    // Toggle Password Visibility
+    function togglePassword(inputId, eyeId) {
+      const input = document.getElementById(inputId);
+      const eye = document.getElementById(eyeId);
+      if (input.type === "password") {
+        input.type = "text";
+        eye.classList.replace("bi-eye", "bi-eye-slash");
+      } else {
+        input.type = "password";
+        eye.classList.replace("bi-eye-slash", "bi-eye");
+      }
+    }
+
+    // Timer Jam & Otomatis Refresh Hari
+    let lastDateStr = formatDateFormatted(new Date());
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById("txtJam").innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+      
+      let currDateStr = formatDateFormatted(now);
+      document.getElementById("txtTanggal").innerText = currDateStr;
+
+      // Auto Refresh jika berganti hari
+      if (currDateStr !== lastDateStr) {
+        lastDateStr = currDateStr;
+        document.getElementById("txtJamMasuk").innerText = "--:--";
+        document.getElementById("txtJamPulang").innerText = "--:--";
+      }
+    }, 1000);
+
+    // Inisialisasi Peta Leaflet
+    function initMap() {
+      if (!map) {
+        map = L.map('map').setView([0, 0], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19
+        }).addTo(map);
+      }
+    }
+
+    // GPS Auto Tracking
+    function startGPSTracking() {
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition((pos) => {
+          currentLat = pos.coords.latitude;
+          currentLng = pos.coords.longitude;
+          document.getElementById("txtKoordinat").innerText = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
+
+          if (map) {
+            const userPos = [currentLat, currentLng];
+            map.setView(userPos, 17);
+
+            if (marker) map.removeLayer(marker);
+            marker = L.marker(userPos).addTo(map).bindPopup("Lokasi Anda").openPopup();
+
+            // Lingkaran radius 50m jika target terdeteksi
+            if (currentUser && currentUser.targetLat) {
+              if (userCircle) map.removeLayer(userCircle);
+              userCircle = L.circle([currentUser.targetLat, currentUser.targetLng], {
+                color: 'blue',
+                fillColor: '#30f',
+                fillOpacity: 0.1,
+                radius: 50
+              }).addTo(map);
+            }
+          }
+        }, (err) => {
+          console.warn("Gagal mengambil GPS:", err.message);
+        }, { enableHighAccuracy: true });
+      }
+    }
+
+    // Handle Login
+    document.getElementById("formLogin").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const nik = document.getElementById("loginNik").value;
+      const pass = document.getElementById("loginPass").value;
+
+      Swal.fire({ title: 'Proses Login...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+      fetch(GAS_API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "login", nik: nik, password: pass })
+      })
+      .then(res => res.json())
+      .then(res => {
+        Swal.close();
+        if (res.status === "success") {
+          currentUser = res.data;
+          document.getElementById("page-login").classList.remove("active");
+          document.getElementById("page-home").classList.add("active");
+          document.getElementById("mainNav").style.display = "flex";
+
+          // Populate User Data
+          document.getElementById("userNama").innerText = currentUser.nama;
+          document.getElementById("userUnit").innerText = currentUser.unitKerja;
+          document.getElementById("profNik").value = currentUser.nik;
+          document.getElementById("profNama").value = currentUser.nama;
+          document.getElementById("profUnit").value = currentUser.unitKerja;
+          document.getElementById("profPass").value = pass;
+
+          initMap();
+          startGPSTracking();
+        } else {
+          Swal.fire("Gagal", res.message, "error");
+        }
+      })
+      .catch(err => Swal.fire("Error", "Gagal terhubung ke server", "error"));
+    });
+
+    // Navigasi SPA
+    function switchPage(page, element) {
+      document.querySelectorAll(".page-section").forEach(el => el.classList.remove("active"));
+      document.querySelectorAll(".nav-item-btn").forEach(el => el.classList.remove("active"));
+
+      document.getElementById(`page-${page}`).classList.add("active");
+      if (element) element.classList.add("active");
+
+      if (page === "rekap") loadRekap();
+    }
+
+    // Kamera Selfie
+    function openAbsenModal() {
+      const modal = new bootstrap.Modal(document.getElementById('modalAbsen'));
+      modal.show();
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+        .then(stream => {
+          videoStream = stream;
+          document.getElementById('webcam').srcObject = stream;
+        })
+        .catch(err => Swal.fire("Kamera Error", "Gagal mengakses kamera depan", "error"));
+    }
+
+    function stopCamera() {
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+      }
+    }
+
+    // Execute Absen OneClick
+    function executeAbsen(tipe) {
+      if (!currentLat || !currentLng) {
+        Swal.fire("Peringatan", "Menunggu lokasi GPS terdeteksi...", "warning");
+        return;
+      }
+
+      const now = new Date();
+      const payload = {
+        action: "doAbsen",
+        nik: currentUser.nik,
+        nama: currentUser.nama,
+        unitKerja: currentUser.unitKerja,
+        tanggal: formatDateFormatted(now),
+        jam: now.toLocaleTimeString('id-ID', { hour12: false }),
+        userLat: currentLat,
+        userLng: currentLng,
+        tipe: tipe
+      };
+
+      Swal.fire({ title: 'Memproses Absensi...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+      fetch(GAS_API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        Swal.close();
+        if (res.status === "success") {
+          bootstrap.Modal.getInstance(document.getElementById('modalAbsen')).hide();
+          stopCamera();
+
+          if (tipe === 'masuk') document.getElementById("txtJamMasuk").innerText = res.jamMasuk;
+          if (tipe === 'pulang') document.getElementById("txtJamPulang").innerText = res.jamPulang;
+
+          Swal.fire("Berhasil", res.message, "success");
+        } else {
+          Swal.fire("Gagal", res.message, "error");
+        }
+      })
+      .catch(err => Swal.fire("Error", "Gagal mengirim data", "error"));
+    }
+
+    // Fetch Rekap Presensi
+    function loadRekap() {
+      const div = document.getElementById("listRekap");
+      div.innerHTML = '<div class="text-center text-muted py-4">Memuat data...</div>';
+
+      fetch(GAS_API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "getRekap", nik: currentUser.nik })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === "success" && res.data.length > 0) {
+          let html = "";
+          res.data.forEach(item => {
+            html += `
+              <div class="card app-card p-3 mb-2">
+                <div class="d-flex justify-content-between font-monospace fw-bold mb-1">
+                  <span>${item.tanggal}</span>
+                </div>
+                <div class="row text-center small">
+                  <div class="col-6 text-success">Masuk: <strong>${item.jamMasuk}</strong></div>
+                  <div class="col-6 text-danger">Pulang: <strong>${item.jamPulang}</strong></div>
+                </div>
+              </div>
+            `;
+          });
+          div.innerHTML = html;
+        } else {
+          div.innerHTML = '<div class="text-center text-muted py-4">Belum ada rekap presensi.</div>';
+        }
+      });
+    }
+
+    // Save Profil Edit
+    document.getElementById("formProfil").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const payload = {
+        action: "updateProfil",
+        nik: currentUser.nik,
+        namaBaru: document.getElementById("profNama").value,
+        unitKerjaBaru: document.getElementById("profUnit").value,
+        passwordBaru: document.getElementById("profPass").value
+      };
+
+      Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+
+      fetch(GAS_API_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        Swal.close();
+        if (res.status === "success") {
+          currentUser.nama = payload.namaBaru;
+          currentUser.unitKerja = payload.unitKerjaBaru;
+          document.getElementById("userNama").innerText = currentUser.nama;
+          document.getElementById("userUnit").innerText = currentUser.unitKerja;
+          Swal.fire("Tersimpan", res.message, "success");
+        } else {
+          Swal.fire("Gagal", res.message, "error");
+        }
+      });
+    });
+
+    function logout() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
