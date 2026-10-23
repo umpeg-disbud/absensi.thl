@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbx...YOUR_SCRIPT_ID.../exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx61vxfuOADnwrwX2qoWte3ghgcQjNSrNoIXZdCDVuqAqV7WuNlvgg26vq1GchjKEmGyQ/exec";
 
 let currentUser = null;
 let currentCoords = { lat: 0, lng: 0 };
