@@ -1,4 +1,4 @@
-const API_URL = "GANTI_DENGAN_URL_DEPLOYMENT_WEB_APP_APPS_SCRIPT_ANDA";
+const API_URL = "https://script.google.com/macros/s/AKfycbx61vxfuOADnwrwX2qoWte3ghgcQjNSrNoIXZdCDVuqAqV7WuNlvgg26vq1GchjKEmGyQ/exec";
 
 let currentUser = null;
 let currentCoords = { lat: 0, lng: 0 };
