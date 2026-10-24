@@ -2,39 +2,44 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
+  <!-- Meta Viewport untuk Mobile Optimization -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Aplikasi Absensi Online</title>
-  <!-- Bootstrap & Leaflet CSS -->
+
+  <!-- UI Framework (Bootstrap 5, Leaflet CSS, Bootstrap Icons) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
   <style>
-    body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding-bottom: 70px; }
-    .card { border-radius: 15px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    #clock { font-size: 2.5rem; font-weight: bold; color: #0d6efd; }
+    body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding-bottom: 75px; }
+    .card { border-radius: 16px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    #clock { font-size: 2.8rem; font-weight: 700; color: #0d6efd; letter-spacing: 1px; }
     #map { height: 180px; border-radius: 12px; margin-top: 10px; z-index: 1; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; }
-    .nav-item-btn { text-align: center; color: #6c757d; font-size: 0.8rem; border: none; background: none; }
-    .nav-item-btn.active { color: #0d6efd; font-weight: bold; }
-    .nav-item-btn i { font-size: 1.4rem; display: block; }
-    .btn-finger { width: 65px; height: 65px; border-radius: 50%; background: #0d6efd; color: #fff; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(13,110,253,0.4); margin-top: -25px; }
-    #cameraView { width: 100%; max-width: 320px; border-radius: 15px; transform: scaleX(-1); }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; }
+    .nav-item-btn { text-align: center; color: #6c757d; font-size: 0.75rem; border: none; background: none; flex: 1; }
+    .nav-item-btn.active { color: #0d6efd; font-weight: 600; }
+    .nav-item-btn i { font-size: 1.3rem; display: block; margin-bottom: 2px; }
+    .btn-finger { width: 60px; height: 60px; border-radius: 50%; background: #0d6efd; color: #fff; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 12px rgba(13,110,253,0.35); margin: -25px auto 0 auto; }
+    #cameraView { width: 100%; max-width: 320px; border-radius: 15px; transform: scaleX(-1); background-color: #000; }
   </style>
 </head>
 <body>
 
-  <!-- LOGIN PAGE -->
+  <!-- HALAMAN LOGIN -->
   <div id="loginPage" class="container py-5">
     <div class="row justify-content-center">
       <div class="col-12 col-md-5">
         <div class="card p-4 text-center">
           <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-person-badge"></i> Absensi Online</h3>
-          <div class="form-floating mb-3">
-            <input type="text" class="form-control" id="loginNik" placeholder="16 Digit NIK" maxlength="16">
+          
+          <div class="form-floating mb-3 text-start">
+            <input type="text" class="form-control" id="loginNik" placeholder="16 Digit NIK" maxlength="16" inputmode="numeric">
             <label for="loginNik">NIK (16 Teks Angka)</label>
           </div>
+
           <div class="input-group mb-3">
-            <div class="form-floating flex-grow-1">
+            <div class="form-floating flex-grow-1 text-start">
               <input type="password" class="form-control" id="loginPassword" placeholder="Password">
               <label for="loginPassword">Password</label>
             </div>
@@ -42,20 +47,21 @@
               <i class="bi bi-eye" id="eyeIcon1"></i>
             </button>
           </div>
+
           <button class="btn btn-primary w-100 py-2 fs-5" onclick="login()">Masuk</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MAIN APP CONTAINER -->
+  <!-- CONTAINER UTAMA APLIKASI -->
   <div id="appPages" style="display: none;">
-    <!-- HOME PAGE -->
+    <!-- HALAMAN UTAMA / HOME -->
     <div id="pageHome" class="container py-3">
       <div class="card p-3 mb-3 text-center">
         <h5 id="userName" class="fw-bold mb-0">-</h5>
         <small id="userUnit" class="text-muted">-</small>
-        <div class="mt-2 text-secondary" id="currentDate">-</div>
+        <div class="mt-2 text-secondary fw-semibold" id="currentDate">-</div>
         <div id="clock">00:00:00</div>
       </div>
 
@@ -76,14 +82,14 @@
 
       <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center">
-          <small class="fw-bold text-secondary"><i class="bi bi-geo-alt-fill text-danger"></i> Titik Koordinat Anda</small>
+          <small class="fw-bold text-secondary"><i class="bi bi-geo-alt-fill text-danger"></i> Titik Koordinat</small>
           <small id="gpsStatus" class="badge bg-secondary">Mencari GPS...</small>
         </div>
         <div id="map"></div>
       </div>
     </div>
 
-    <!-- REKAP PAGE -->
+    <!-- HALAMAN REKAP PRESENSI -->
     <div id="pageRekap" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-calendar-check"></i> Rekap Presensi</h5>
       <div class="card p-3">
@@ -102,7 +108,7 @@
       </div>
     </div>
 
-    <!-- SETTINGS PAGE -->
+    <!-- HALAMAN PENGATURAN -->
     <div id="pageSettings" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-gear"></i> Pengaturan Akun</h5>
       <div class="card p-3">
@@ -112,14 +118,18 @@
             <input type="password" class="form-control" id="oldPass" placeholder="Password Lama">
             <label for="oldPass">Password Lama</label>
           </div>
-          <button class="btn btn-outline-secondary" onclick="togglePassword('oldPass', 'eyeIcon2')"><i class="bi bi-eye" id="eyeIcon2"></i></button>
+          <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('oldPass', 'eyeIcon2')">
+            <i class="bi bi-eye" id="eyeIcon2"></i>
+          </button>
         </div>
         <div class="input-group mb-3">
           <div class="form-floating flex-grow-1">
             <input type="password" class="form-control" id="newPass" placeholder="Password Baru">
             <label for="newPass">Password Baru</label>
           </div>
-          <button class="btn btn-outline-secondary" onclick="togglePassword('newPass', 'eyeIcon3')"><i class="bi bi-eye" id="eyeIcon3"></i></button>
+          <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('newPass', 'eyeIcon3')">
+            <i class="bi bi-eye" id="eyeIcon3"></i>
+          </button>
         </div>
         <button class="btn btn-primary w-100" onclick="changePassword()">Simpan Password</button>
       </div>
@@ -145,7 +155,7 @@
     </div>
   </div>
 
-  <!-- ABSEN MODAL (CAMERA & SELFIE) -->
+  <!-- MODAL VERIFIKASI FACE SELFIE -->
   <div class="modal fade" id="absenModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -155,7 +165,6 @@
         </div>
         <div class="modal-body text-center">
           <video id="cameraView" autoplay playsinline></video>
-          <canvas id="canvas" style="display:none;"></canvas>
           <div class="mt-3 d-flex justify-content-center gap-2">
             <button class="btn btn-success w-50 py-2" onclick="doAbsen('masuk')"><i class="bi bi-box-arrow-in-right"></i> Jam Masuk</button>
             <button class="btn btn-danger w-50 py-2" onclick="doAbsen('pulang')"><i class="bi bi-box-arrow-right"></i> Jam Pulang</button>
@@ -165,11 +174,11 @@
     </div>
   </div>
 
-  <!-- JS Scripts -->
+  <!-- JS Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // MASUKKAN URL DEPLOY WEB APP GOOGLE APPS SCRIPT DI SINI
+    // MASUKKAN URL DEPLOYMENT GOOGLE APPS SCRIPT DI SINI
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx61vxfuOADnwrwX2qoWte3ghgcQjNSrNoIXZdCDVuqAqV7WuNlvgg26vq1GchjKEmGyQ/exec";
 
     let currentUser = null;
@@ -224,7 +233,7 @@
       document.getElementById("appPages").style.display = "block";
       initGPS();
       loadDashboard();
-      setInterval(loadDashboard, 1000); // Sync Jam Server & auto refresh tanggal
+      setInterval(loadDashboard, 1000); // Polling jam server & tanggal
     }
 
     async function loadDashboard() {
@@ -240,7 +249,7 @@
         document.getElementById("jamMasukVal").innerText = res.jamMasuk;
         document.getElementById("jamPulangVal").innerText = res.jamPulang;
 
-        // Auto Refresh jika tanggal berganti
+        // Auto-refresh jika terjadi pergantian tanggal di server
         if (lastLoadedDate !== "" && lastLoadedDate !== res.serverDate) {
           location.reload();
         }
@@ -259,7 +268,7 @@
             updateMap(currentLat, currentLng);
           },
           (err) => {
-            document.getElementById("gpsStatus").innerText = "GPS Gagal/Mati";
+            document.getElementById("gpsStatus").innerText = "GPS Mati/Gagal";
             document.getElementById("gpsStatus").className = "badge bg-danger";
           },
           { enableHighAccuracy: true }
@@ -300,8 +309,8 @@
         res.rekap.forEach(r => {
           tbody.innerHTML += `<tr>
             <td>${r.tanggal}</td>
-            <td class="text-success">${r.jamMasuk}</td>
-            <td class="text-danger">${r.jamPulang}</td>
+            <td class="text-success font-monospace">${r.jamMasuk}</td>
+            <td class="text-danger font-monospace">${r.jamPulang}</td>
           </tr>`;
         });
       }
@@ -330,7 +339,7 @@
 
     async function doAbsen(type) {
       if (currentLat === 0 && currentLng === 0) {
-        return alert("Lokasi GPS belum terdeteksi. Pastikan izin GPS diaktifkan!");
+        return alert("Lokasi GPS belum terdeteksi. Pastikan lokasi/GPS HP Anda aktif!");
       }
 
       const res = await apiPost({
@@ -352,7 +361,7 @@
     async function changePassword() {
       const oldPass = document.getElementById("oldPass").value;
       const newPass = document.getElementById("newPass").value;
-      if (!oldPass || !newPass) return alert("Semua kolom harus diisi!");
+      if (!oldPass || !newPass) return alert("Semua kolom password wajib diisi!");
 
       const res = await apiPost({
         action: "changePassword",
@@ -368,7 +377,7 @@
       }
     }
 
-    // Auto Login Check
+    // Pengecekan Sesi Login
     window.onload = () => {
       if (localStorage.getItem("user_nik")) {
         initApp();
