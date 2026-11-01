@@ -13,13 +13,13 @@
     body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 75px; }
     .card { border-radius: 16px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     #clock { font-size: 2.8rem; font-weight: 700; color: #0d6efd; letter-spacing: 1px; }
-    #map { height: 180px; border-radius: 12px; margin-top: 10px; z-index: 1; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; align-items: center; }
+    #map, #eventMap { height: 180px; border-radius: 12px; margin-top: 10px; z-index: 1; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; }
     .nav-item-btn { text-align: center; color: #6c757d; font-size: 0.75rem; border: none; background: none; flex: 1; }
     .nav-item-btn.active { color: #0d6efd; font-weight: 600; }
     .nav-item-btn i { font-size: 1.3rem; display: block; margin-bottom: 2px; }
-    .btn-finger { width: 60px; height: 60px; border-radius: 50%; background: #0d6efd; color: #fff; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 12px rgba(13,110,253,0.35); margin: 0 auto; }
-    #cameraView, #eventCameraView { width: 100%; max-width: 320px; border-radius: 15px; transform: scaleX(-1); background-color: #000; }
+    .btn-finger { width: 60px; height: 60px; border-radius: 50%; background: #0d6efd; color: #fff; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 12px rgba(13,110,253,0.35); margin: -25px auto 0 auto; }
+    #cameraView { width: 100%; max-width: 320px; border-radius: 15px; transform: scaleX(-1); background-color: #000; }
   </style>
 </head>
 <body>
@@ -120,11 +120,11 @@
       <div id="eventAttendanceResult" class="mt-3"></div>
     </div>
 
-    <!-- SETTINGS PAGE (TERMASUK KELUAR) -->
+    <!-- SETTINGS PAGE (Termasuk Menu Keluar/Logout) -->
     <div id="pageSettings" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-gear"></i> Pengaturan Akun</h5>
       <div class="card p-3 mb-3">
-        <h6 class="fw-bold mb-3">Ubah Password</h6>
+        <h6>Ubah Password</h6>
         <div class="input-group mb-3">
           <div class="form-floating flex-grow-1">
             <input type="password" class="form-control" id="oldPass" placeholder="Password Lama">
@@ -147,12 +147,13 @@
       </div>
 
       <div class="card p-3">
-        <h6 class="fw-bold mb-2">Sesi Akun</h6>
-        <button class="btn btn-danger w-100 py-2" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Keluar Aplikasi</button>
+        <button class="btn btn-danger w-100 py-2" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i> Keluar Aplikasi
+        </button>
       </div>
     </div>
 
-    <!-- BOTTOM NAVBAR (Tombol Sidik Jari di Tengah) -->
+    <!-- BOTTOM NAVBAR (Tombol Sidik Jari di Tengah Tepat) -->
     <div class="bottom-nav">
       <button class="nav-item-btn active" id="navHome" onclick="switchTab('home')">
         <i class="bi bi-house-door"></i> Home
@@ -160,12 +161,9 @@
       <button class="nav-item-btn" id="navRekap" onclick="switchTab('rekap')">
         <i class="bi bi-journal-text"></i> Rekap
       </button>
-      
-      <!-- Tombol Sidik Jari Center -->
       <button class="nav-item-btn" onclick="openAbsenModal()">
         <div class="btn-finger"><i class="bi bi-fingerprint"></i></div>
       </button>
-
       <button class="nav-item-btn" id="navEvent" onclick="switchTab('event')">
         <i class="bi bi-calendar-event"></i> Event
       </button>
@@ -203,7 +201,7 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCamera()"></button>
         </div>
         <div class="modal-body text-center">
-          <video id="eventCameraView" autoplay playsinline></video>
+          <video id="eventCameraView" autoplay playsinline style="width:100%; max-width:320px; border-radius:15px; transform:scaleX(-1); background:#000;"></video>
           <canvas id="canvas" style="display:none;"></canvas>
           <div class="mt-3">
             <button class="btn btn-primary w-100 py-2" onclick="submitEventAbsen()"><i class="bi bi-check-circle"></i> Kirim Presensi Event</button>
@@ -385,7 +383,7 @@
         container.innerHTML += `
           <div class="card p-3 mb-3">
             <h5 class="fw-bold text-primary">${ev.namaEvent}</h5>
-            <small class="text-muted"><i class="bi bi-calendar"></i> ${ev.tanggal}</small>
+            <small class="text-muted"><i class="bi bi-calendar"></i> Tanggal Event: ${ev.tanggal}</small>
             <button class="btn btn-outline-primary mt-2" onclick="openEventModal('${ev.id}')">
               <i class="bi bi-camera"></i> Ambil Absen Event
             </button>
