@@ -2,35 +2,33 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta Viewport untuk Mobile Optimization -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Aplikasi Absensi Online</title>
+  <title>Aplikasi Absensi & Event Online</title>
 
-  <!-- Bootstrap 5, Leaflet CSS, Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
   <style>
-    body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding-bottom: 75px; }
+    body { background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 75px; }
     .card { border-radius: 16px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     #clock { font-size: 2.8rem; font-weight: 700; color: #0d6efd; letter-spacing: 1px; }
     #map { height: 180px; border-radius: 12px; margin-top: 10px; z-index: 1; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-around; padding: 8px 0; z-index: 1000; align-items: center; }
     .nav-item-btn { text-align: center; color: #6c757d; font-size: 0.75rem; border: none; background: none; flex: 1; }
     .nav-item-btn.active { color: #0d6efd; font-weight: 600; }
     .nav-item-btn i { font-size: 1.3rem; display: block; margin-bottom: 2px; }
-    .btn-finger { width: 60px; height: 60px; border-radius: 50%; background: #0d6efd; color: #fff; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 12px rgba(13,110,253,0.35); margin: -25px auto 0 auto; }
-    #cameraView { width: 100%; max-width: 320px; border-radius: 15px; transform: scaleX(-1); background-color: #000; }
+    .btn-finger { width: 60px; height: 60px; border-radius: 50%; background: #0d6efd; color: #fff; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; border: 4px solid #fff; box-shadow: 0 4px 12px rgba(13,110,253,0.35); margin: 0 auto; }
+    #cameraView, #eventCameraView { width: 100%; max-width: 320px; border-radius: 15px; transform: scaleX(-1); background-color: #000; }
   </style>
 </head>
 <body>
 
-  <!-- CUSTOM TOAST NOTIFICATION CONTAINER (Pengganti Alert) -->
-  <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 3000;">
-    <div id="appToast" class="toast align-items-center text-white border-0 shadow" role="alert" aria-live="assertive" aria-atomic="true">
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
       <div class="d-flex">
-        <div class="toast-body" id="toastMessage">Pesan notifikasi...</div>
+        <div class="toast-body" id="toastMessage">-</div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
       </div>
     </div>
@@ -41,13 +39,11 @@
     <div class="row justify-content-center">
       <div class="col-12 col-md-5">
         <div class="card p-4 text-center">
-          <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-person-badge"></i> Absensi THL Online</h3>
-          
+          <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-person-badge"></i> Absensi & Event</h3>
           <div class="form-floating mb-3 text-start">
             <input type="text" class="form-control" id="loginNik" placeholder="16 Digit NIK" maxlength="16" inputmode="numeric">
-            <label for="loginNik">NIK</label>
+            <label for="loginNik">NIK (16 Teks Angka)</label>
           </div>
-
           <div class="input-group mb-3">
             <div class="form-floating flex-grow-1 text-start">
               <input type="password" class="form-control" id="loginPassword" placeholder="Password">
@@ -57,7 +53,6 @@
               <i class="bi bi-eye" id="eyeIcon1"></i>
             </button>
           </div>
-
           <button class="btn btn-primary w-100 py-2 fs-5" onclick="login()">Masuk</button>
         </div>
       </div>
@@ -66,7 +61,7 @@
 
   <!-- CONTAINER UTAMA APLIKASI -->
   <div id="appPages" style="display: none;">
-    <!-- HALAMAN UTAMA / HOME -->
+    <!-- HOME PAGE -->
     <div id="pageHome" class="container py-3">
       <div class="card p-3 mb-3 text-center">
         <h5 id="userName" class="fw-bold mb-0">-</h5>
@@ -99,7 +94,7 @@
       </div>
     </div>
 
-    <!-- HALAMAN REKAP PRESENSI -->
+    <!-- REKAP PRESENSI PAGE -->
     <div id="pageRekap" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-calendar-check"></i> Rekap Presensi</h5>
       <div class="card p-3">
@@ -118,11 +113,18 @@
       </div>
     </div>
 
-    <!-- HALAMAN PENGATURAN -->
+    <!-- EVENT PRESENSI PAGE -->
+    <div id="pageEvent" class="container py-3" style="display:none;">
+      <h5 class="fw-bold mb-3"><i class="bi bi-calendar-event"></i> Presensi Event</h5>
+      <div id="eventListContainer"></div>
+      <div id="eventAttendanceResult" class="mt-3"></div>
+    </div>
+
+    <!-- SETTINGS PAGE (TERMASUK KELUAR) -->
     <div id="pageSettings" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-gear"></i> Pengaturan Akun</h5>
-      <div class="card p-3">
-        <h6>Ubah Password</h6>
+      <div class="card p-3 mb-3">
+        <h6 class="fw-bold mb-3">Ubah Password</h6>
         <div class="input-group mb-3">
           <div class="form-floating flex-grow-1">
             <input type="password" class="form-control" id="oldPass" placeholder="Password Lama">
@@ -143,9 +145,14 @@
         </div>
         <button class="btn btn-primary w-100" onclick="changePassword()">Simpan Password</button>
       </div>
+
+      <div class="card p-3">
+        <h6 class="fw-bold mb-2">Sesi Akun</h6>
+        <button class="btn btn-danger w-100 py-2" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Keluar Aplikasi</button>
+      </div>
     </div>
 
-    <!-- BOTTOM NAVBAR -->
+    <!-- BOTTOM NAVBAR (Tombol Sidik Jari di Tengah) -->
     <div class="bottom-nav">
       <button class="nav-item-btn active" id="navHome" onclick="switchTab('home')">
         <i class="bi bi-house-door"></i> Home
@@ -153,24 +160,27 @@
       <button class="nav-item-btn" id="navRekap" onclick="switchTab('rekap')">
         <i class="bi bi-journal-text"></i> Rekap
       </button>
+      
+      <!-- Tombol Sidik Jari Center -->
       <button class="nav-item-btn" onclick="openAbsenModal()">
         <div class="btn-finger"><i class="bi bi-fingerprint"></i></div>
+      </button>
+
+      <button class="nav-item-btn" id="navEvent" onclick="switchTab('event')">
+        <i class="bi bi-calendar-event"></i> Event
       </button>
       <button class="nav-item-btn" id="navSettings" onclick="switchTab('settings')">
         <i class="bi bi-gear"></i> Setting
       </button>
-      <button class="nav-item-btn text-danger" onclick="logout()">
-        <i class="bi bi-box-arrow-right"></i> Keluar
-      </button>
     </div>
   </div>
 
-  <!-- MODAL VERIFIKASI FACE SELFIE -->
+  <!-- MODAL ABSENSI UTAMA (SELFIE) -->
   <div class="modal fade" id="absenModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title fw-bold"><i class="bi bi-camera"></i> Verifikasi Face Selfie</h5>
+          <h5 class="modal-title fw-bold"><i class="bi bi-camera"></i> Verifikasi Selfie Harian</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCamera()"></button>
         </div>
         <div class="modal-body text-center">
@@ -184,35 +194,44 @@
     </div>
   </div>
 
+  <!-- MODAL ABSENSI EVENT (SELFIE) -->
+  <div class="modal fade" id="eventModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold"><i class="bi bi-camera"></i> Selfie Presensi Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="stopCamera()"></button>
+        </div>
+        <div class="modal-body text-center">
+          <video id="eventCameraView" autoplay playsinline></video>
+          <canvas id="canvas" style="display:none;"></canvas>
+          <div class="mt-3">
+            <button class="btn btn-primary w-100 py-2" onclick="submitEventAbsen()"><i class="bi bi-check-circle"></i> Kirim Presensi Event</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JS Dependencies -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // MASUKKAN URL DEPLOYMENT GOOGLE APPS SCRIPT DI SINI
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx61vxfuOADnwrwX2qoWte3ghgcQjNSrNoIXZdCDVuqAqV7WuNlvgg26vq1GchjKEmGyQ/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_l6-8aXTlpV8odjczDbE4D6GnOCHhkgJW9_oaBnJu555sjMxyEfC0x6vEO-QXgz8LJw/exec";
 
-    let currentUser = null;
     let currentLat = 0;
     let currentLng = 0;
     let map, marker;
     let videoStream = null;
     let lastLoadedDate = "";
+    let activeEventId = null;
 
-    // Fungsi Pengganti Alert (Toast Notification)
-    function showToast(message, type = "success") {
-      const toastEl = document.getElementById('appToast');
+    function showToast(message, type = 'success') {
+      const toastEl = document.getElementById('liveToast');
       const toastMsg = document.getElementById('toastMessage');
-      
-      if (type === "success") {
-        toastEl.className = "toast align-items-center text-white bg-success border-0 shadow";
-      } else if (type === "error" || type === "danger") {
-        toastEl.className = "toast align-items-center text-white bg-danger border-0 shadow";
-      } else {
-        toastEl.className = "toast align-items-center text-white bg-primary border-0 shadow";
-      }
-
       toastMsg.innerText = message;
-      const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+      toastEl.className = `toast align-items-center text-white border-0 bg-${type === 'success' ? 'success' : 'danger'}`;
+      const toast = new bootstrap.Toast(toastEl);
       toast.show();
     }
 
@@ -236,23 +255,19 @@
         });
         return await response.json();
       } catch (err) {
-        return { success: false, message: "Koneksi ke server gagal: " + err.toString() };
+        showToast("Koneksi server gagal!", "error");
+        return { success: false, message: err.toString() };
       }
     }
 
     async function login() {
       const nik = document.getElementById("loginNik").value;
       const password = document.getElementById("loginPassword").value;
-      if (!nik || !password) {
-        showToast("NIK dan Password wajib diisi!", "error");
-        return;
-      }
+      if (!nik || !password) return showToast("NIK dan Password wajib diisi!", "error");
 
       const res = await apiPost({ action: "login", nik: nik, password: password });
       if (res.success) {
-        currentUser = res.user;
         localStorage.setItem("user_nik", nik);
-        showToast("Login Berhasil!", "success");
         initApp();
       } else {
         showToast(res.message, "error");
@@ -325,6 +340,7 @@
     function switchTab(tab) {
       document.getElementById("pageHome").style.display = tab === 'home' ? 'block' : 'none';
       document.getElementById("pageRekap").style.display = tab === 'rekap' ? 'block' : 'none';
+      document.getElementById("pageEvent").style.display = tab === 'event' ? 'block' : 'none';
       document.getElementById("pageSettings").style.display = tab === 'settings' ? 'block' : 'none';
 
       document.querySelectorAll('.bottom-nav .nav-item-btn').forEach(b => b.classList.remove('active'));
@@ -332,6 +348,10 @@
       if (tab === 'rekap') {
         document.getElementById('navRekap').classList.add('active');
         loadRekap();
+      }
+      if (tab === 'event') {
+        document.getElementById('navEvent').classList.add('active');
+        loadEventList();
       }
       if (tab === 'settings') document.getElementById('navSettings').classList.add('active');
     }
@@ -351,19 +371,49 @@
       }
     }
 
+    async function loadEventList() {
+      const res = await apiPost({ action: "getEventList", nik: localStorage.getItem("user_nik") });
+      const container = document.getElementById("eventListContainer");
+      container.innerHTML = "";
+
+      if (!res.success || res.events.length === 0) {
+        container.innerHTML = `<div class="card p-3 text-center text-muted">Tidak ada jadwal event untuk NIK Anda saat ini.</div>`;
+        return;
+      }
+
+      res.events.forEach(ev => {
+        container.innerHTML += `
+          <div class="card p-3 mb-3">
+            <h5 class="fw-bold text-primary">${ev.namaEvent}</h5>
+            <small class="text-muted"><i class="bi bi-calendar"></i> ${ev.tanggal}</small>
+            <button class="btn btn-outline-primary mt-2" onclick="openEventModal('${ev.id}')">
+              <i class="bi bi-camera"></i> Ambil Absen Event
+            </button>
+          </div>
+        `;
+      });
+    }
+
     function openAbsenModal() {
       const modal = new bootstrap.Modal(document.getElementById('absenModal'));
       modal.show();
-      startCamera();
+      startCamera("cameraView");
     }
 
-    function startCamera() {
+    function openEventModal(eventId) {
+      activeEventId = eventId;
+      const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+      modal.show();
+      startCamera("eventCameraView");
+    }
+
+    function startCamera(elementId) {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
         .then((stream) => {
           videoStream = stream;
-          document.getElementById("cameraView").srcObject = stream;
+          document.getElementById(elementId).srcObject = stream;
         })
-        .catch((err) => showToast("Kamera gagal diakses: " + err.message, "error"));
+        .catch((err) => showToast("Kamera gagal diakses: " + err, "error"));
     }
 
     function stopCamera() {
@@ -374,8 +424,7 @@
 
     async function doAbsen(type) {
       if (currentLat === 0 && currentLng === 0) {
-        showToast("Lokasi GPS belum terdeteksi. Pastikan izin lokasi HP aktif!", "error");
-        return;
+        return showToast("Lokasi GPS belum terdeteksi!", "error");
       }
 
       const res = await apiPost({
@@ -386,23 +435,60 @@
         lng: currentLng
       });
 
+      showToast(res.message, res.success ? "success" : "error");
       if (res.success) {
-        showToast(res.message, "success");
         stopCamera();
         bootstrap.Modal.getInstance(document.getElementById('absenModal')).hide();
         loadDashboard();
-      } else {
-        showToast(res.message, "error");
+      }
+    }
+
+    async function submitEventAbsen() {
+      if (currentLat === 0 && currentLng === 0) {
+        return showToast("Lokasi GPS belum terdeteksi!", "error");
+      }
+
+      const video = document.getElementById("eventCameraView");
+      const canvas = document.getElementById("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageBase64 = canvas.toDataURL("image/jpeg");
+
+      const res = await apiPost({
+        action: "absenEvent",
+        nik: localStorage.getItem("user_nik"),
+        eventId: activeEventId,
+        lat: currentLat,
+        lng: currentLng,
+        image: imageBase64
+      });
+
+      showToast(res.message, res.success ? "success" : "error");
+      if (res.success) {
+        stopCamera();
+        bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+        
+        const att = res.attendance;
+        document.getElementById("eventAttendanceResult").innerHTML = `
+          <div class="card p-3 border-start border-4 border-success">
+            <h6 class="fw-bold text-success"><i class="bi bi-check-circle-fill"></i> Kehadiran Event Tercatat</h6>
+            <p class="mb-1"><strong>Nama:</strong> ${att.nama}</p>
+            <p class="mb-1"><strong>Event:</strong> ${att.namaEvent}</p>
+            <p class="mb-1"><strong>Tanggal:</strong> ${att.tanggal}</p>
+            <p class="mb-1"><strong>Jam:</strong> ${att.jam}</p>
+            <p class="mb-1"><strong>Koordinat:</strong> ${att.koordinat}</p>
+            <a href="${att.pdfUrl}" target="_blank" class="btn btn-sm btn-outline-danger mt-2"><i class="bi bi-file-earmark-pdf"></i> Lihat Foto PDF di Drive</a>
+          </div>
+        `;
       }
     }
 
     async function changePassword() {
       const oldPass = document.getElementById("oldPass").value;
       const newPass = document.getElementById("newPass").value;
-      if (!oldPass || !newPass) {
-        showToast("Semua kolom password wajib diisi!", "error");
-        return;
-      }
+      if (!oldPass || !newPass) return showToast("Semua kolom password wajib diisi!", "error");
 
       const res = await apiPost({
         action: "changePassword",
@@ -411,12 +497,10 @@
         newPassword: newPass
       });
 
+      showToast(res.message, res.success ? "success" : "error");
       if (res.success) {
-        showToast(res.message, "success");
         document.getElementById("oldPass").value = "";
         document.getElementById("newPass").value = "";
-      } else {
-        showToast(res.message, "error");
       }
     }
 
