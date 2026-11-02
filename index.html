@@ -149,9 +149,9 @@
       </div>
 
       <div class="card p-3">
-        <h6 class="fw-bold text-danger">Keluar Aplikasi</h6>
+        <h6 class="fw-bold text-danger">Keluar SINONÁ </h6>
         <p class="text-muted small mb-2">Akhiri sesi login Anda di perangkat ini.</p>
-        <button class="btn btn-outline-danger w-100" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Keluar / Logout</button>
+        <button class="btn btn-outline-danger w-100" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Keluar</button>
       </div>
     </div>
 
@@ -189,8 +189,8 @@
         <div class="modal-body text-center">
           <video id="cameraView" autoplay playsinline></video>
           <div class="mt-3 d-flex justify-content-center gap-2">
-            <button class="btn btn-success w-50 py-2" onclick="doAbsen('masuk')"><i class="bi bi-box-arrow-in-right"></i> Jam Masuk</button>
-            <button class="btn btn-danger w-50 py-2" onclick="doAbsen('pulang')"><i class="bi bi-box-arrow-right"></i> Jam Pulang</button>
+            <button class="btn btn-success w-50 py-2" onclick="doAbsen('masuk')"><i class="bi bi-box-arrow-in-right"></i> Masuk</button>
+            <button class="btn btn-danger w-50 py-2" onclick="doAbsen('pulang')"><i class="bi bi-box-arrow-right"></i> Pulang</button>
           </div>
         </div>
       </div>
@@ -380,7 +380,7 @@
       container.innerHTML = "";
 
       if (!res.success || res.events.length === 0) {
-        container.innerHTML = `<div class="card p-3 text-center text-muted">Tidak ada jadwal event untuk NIK Anda saat ini.</div>`;
+        container.innerHTML = `<div class="card p-3 text-center text-muted">Tidak ada jadwal event untuk Nama Anda saat ini.</div>`;
         return;
       }
 
