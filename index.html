@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Aplikasi Absensi & Event Online</title>
 
+  <!-- CSS Dependencies -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -15,6 +16,7 @@
     #clock { font-size: 2.8rem; font-weight: 700; color: #0d6efd; letter-spacing: 1px; }
     #map { height: 180px; border-radius: 12px; margin-top: 10px; z-index: 1; }
     
+    /* Layout Bottom Bar dengan Fingerprint di Center Persis */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; z-index: 1000; }
     .nav-item-btn { text-align: center; color: #6c757d; font-size: 0.72rem; border: none; background: none; flex: 1; }
     .nav-item-btn.active { color: #0d6efd; font-weight: 600; }
@@ -43,7 +45,7 @@
     <div class="row justify-content-center">
       <div class="col-12 col-md-5">
         <div class="card p-4 text-center">
-          <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-person-badge"></i> SINONÁ</h3>
+          <h3 class="fw-bold mb-4 text-primary"><i class="bi bi-fingerprint"></i> SINONÁ</h3>
           <div class="form-floating mb-3 text-start">
             <input type="text" class="form-control" id="loginNik" placeholder="16 Digit NIK" maxlength="16" inputmode="numeric">
             <label for="loginNik">NIK</label>
@@ -141,11 +143,21 @@
     <!-- EVENT PRESENSI PAGE -->
     <div id="pageEvent" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-calendar-event"></i> Presensi Event</h5>
+      
+      <!-- Pilihan / Filter Tanggal Event -->
+      <div class="card p-3 mb-3">
+        <label class="form-label small text-muted mb-1 fw-bold"><i class="bi bi-calendar3"></i> Pilih Tanggal Event</label>
+        <div class="input-group input-group-sm">
+          <input type="date" class="form-control" id="selectedEventDate" onchange="loadEventList()">
+          <button class="btn btn-outline-secondary" type="button" onclick="resetEventDate()"><i class="bi bi-arrow-counterclockwise"></i> Semua</button>
+        </div>
+      </div>
+
       <div id="eventListContainer"></div>
       <div id="eventAttendanceResult" class="mt-3"></div>
     </div>
 
-    <!-- SETTINGS PAGE -->
+    <!-- SETTINGS PAGE (TERMASUK KELUAR) -->
     <div id="pageSettings" class="container py-3" style="display:none;">
       <h5 class="fw-bold mb-3"><i class="bi bi-gear"></i> Pengaturan Akun</h5>
       <div class="card p-3 mb-3">
@@ -187,6 +199,7 @@
         <i class="bi bi-journal-text"></i> Rekap
       </button>
       
+      <!-- FINGERPRINT BUTTON CENTERED -->
       <div class="btn-finger-container">
         <div class="btn-finger" onclick="openAbsenModal()"><i class="bi bi-fingerprint"></i></div>
       </div>
@@ -430,18 +443,34 @@
     }
 
     async function loadEventList() {
+      const selectedDateRaw = document.getElementById("selectedEventDate").value;
       const res = await apiPost({ action: "getEventList", nik: localStorage.getItem("user_nik") });
       const container = document.getElementById("eventListContainer");
       container.innerHTML = "";
 
       if (!res.success || res.events.length === 0) {
-        container.innerHTML = `<div class="card p-3 text-center text-muted">Tidak ada jadwal event untuk Nama Anda saat ini.</div>`;
+        container.innerHTML = `<div class="card p-3 text-center text-muted">Tidak ada jadwal event untuk NIK Anda saat ini.</div>`;
         return;
       }
 
-      res.events.forEach(ev => {
+      let filterDateDMY = "";
+      if (selectedDateRaw) {
+        filterDateDMY = formatDateToDMY(selectedDateRaw);
+      }
+
+      let filteredEvents = res.events;
+      if (filterDateDMY) {
+        filteredEvents = res.events.filter(ev => ev.tanggal === filterDateDMY);
+      }
+
+      if (filteredEvents.length === 0) {
+        container.innerHTML = `<div class="card p-3 text-center text-muted">Tidak ada event pada tanggal yang dipilih.</div>`;
+        return;
+      }
+
+      filteredEvents.forEach(ev => {
         container.innerHTML += `
-          <div class="card p-3 mb-3">
+          <div class="card p-3 mb-3 border-start border-4 border-primary">
             <h5 class="fw-bold text-primary">${ev.namaEvent}</h5>
             <small class="text-muted"><i class="bi bi-calendar"></i> Tanggal: ${ev.tanggal}</small><br>
             <small class="text-muted"><i class="bi bi-geo-alt"></i> Radius Maksimal: ${ev.radius} Meter</small>
@@ -451,6 +480,11 @@
           </div>
         `;
       });
+    }
+
+    function resetEventDate() {
+      document.getElementById("selectedEventDate").value = "";
+      loadEventList();
     }
 
     function openAbsenModal() {
